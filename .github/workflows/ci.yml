@@ -1,0 +1,31 @@
+name: CI - build & notify webhook (local/dev mode)
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build-and-notify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install & build frontend (if present)
+        run: |
+          if [ -f package.json ]; then
+            npm ci
+            npm run build || true
+          fi
+
+      - name: Notify backend webhook
+        if: ${{ secrets.BACKEND_WEBHOOK_URL }}
+        run: |
+          curl -X POST -H "Content-Type: application/json" \
+            -d "{\"repository\": {\"full_name\": \"${{ github.repository }}\"}, \"ref\": \"${{ github.ref }}\", \"run_id\": \"${{ github.run_id }}\"}" \
+            ${{ secrets.BACKEND_WEBHOOK_URL }}
